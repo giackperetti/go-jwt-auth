@@ -4,6 +4,7 @@ import (
 	"github.com/giackperetti/go-jwt-auth/database"
 	"github.com/giackperetti/go-jwt-auth/handlers"
 
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -21,10 +22,10 @@ func main() {
 	e.POST("/refresh", handlers.RefreshToken(db))
 
 	r := e.Group("/restricted")
-	r.Use(middleware.JWTWithConfig(middleware.JWTConfig{
+	r.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey: handlers.JWTSecret,
 	}))
-	r.GET("", handlers.Restricted)
+	r.GET("", handlers.Restricted(db))
 
-	e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.Start(":8080"))
 }
