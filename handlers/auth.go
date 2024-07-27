@@ -64,6 +64,14 @@ func Login(db *gorm.DB) echo.HandlerFunc {
 			return err
 		}
 
+		token := models.Token{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}
+		if err := db.Create(&token).Error; err != nil {
+			return err
+		}
+
 		return c.JSON(http.StatusOK, echo.Map{
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,
@@ -93,9 +101,18 @@ func RefreshToken(db *gorm.DB) echo.HandlerFunc {
 		claims := token.Claims.(jwt.MapClaims)
 		username := claims["name"].(string)
 
-		// Create new access token
+		var storedToken models.Token
+		if err := db.Where("refresh_token = ?", request.RefreshToken).First(&storedToken).Error; err != nil {
+			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid refresh token"})
+		}
+
 		newAccessToken, err := utils.CreateToken(username, JWTSecret, 15*time.Minute)
 		if err != nil {
+			return err
+		}
+
+		storedToken.AccessToken = newAccessToken
+		if err := db.Save(&storedToken).Error; err != nil {
 			return err
 		}
 
@@ -105,9 +122,18 @@ func RefreshToken(db *gorm.DB) echo.HandlerFunc {
 	}
 }
 
-func Restricted(c echo.Context) error {
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	name := claims["name"].(string)
-	return c.JSON(http.StatusOK, echo.Map{"message": "Welcome " + name})
+func Restricted(db *gorm.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		name := claims["name"].(string)
+		tokenStr := user.Raw
+
+		var storedToken models.Token
+		if err := db.Where("access_token = ?", tokenStr).First(&storedToken).Error; err != nil {
+			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid token"})
+		}
+
+		return c.JSON(http.StatusOK, echo.Map{"message": "Welcome " + name})
+	}
 }
