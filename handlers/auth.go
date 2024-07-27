@@ -25,7 +25,6 @@ func Signup(db *gorm.DB) echo.HandlerFunc {
 			return err
 		}
 
-		// Hash password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
@@ -52,12 +51,10 @@ func Login(db *gorm.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid username or password"})
 		}
 
-		// Verify password
 		if err := bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(user.Password)); err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid username or password"})
 		}
 
-		// Create tokens
 		accessToken, err := utils.CreateToken(storedUser.Username, JWTSecret, 15*time.Minute)
 		if err != nil {
 			return err
@@ -83,7 +80,6 @@ func RefreshToken(db *gorm.DB) echo.HandlerFunc {
 			return err
 		}
 
-		// Parse refresh token
 		token, err := jwt.Parse(request.RefreshToken, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, echo.ErrUnauthorized
