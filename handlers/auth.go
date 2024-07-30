@@ -7,7 +7,7 @@ import (
 	"github.com/giackperetti/go-jwt-auth/models"
 	"github.com/giackperetti/go-jwt-auth/utils"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -124,13 +124,12 @@ func RefreshToken(db *gorm.DB) echo.HandlerFunc {
 
 func Restricted(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		user := c.Get("user").(*jwt.Token)
-		claims := user.Claims.(jwt.MapClaims)
+		userToken := c.Get("user").(*jwt.Token)
+		claims := userToken.Claims.(jwt.MapClaims)
 		name := claims["name"].(string)
-		tokenStr := user.Raw
 
-		var storedToken models.Token
-		if err := db.Where("access_token = ?", tokenStr).First(&storedToken).Error; err != nil {
+		var token models.Token
+		if err := db.Where("access_token = ?", userToken.Raw).First(&token).Error; err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid token"})
 		}
 
