@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/giackperetti/go-jwt-auth/database"
 	"github.com/giackperetti/go-jwt-auth/handlers"
 
@@ -24,6 +26,9 @@ func main() {
 	r := e.Group("/restricted")
 	r.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey: handlers.JWTSecret,
+		ErrorHandler: func(c echo.Context, err error) error {
+			return c.JSON(http.StatusUnauthorized, echo.Map{"message": "invalid or expired jwt"})
+		},
 	}))
 	r.GET("", handlers.Restricted(db))
 
